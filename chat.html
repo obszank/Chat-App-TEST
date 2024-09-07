@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App with Tokens</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        .chat-box { width: 300px; height: 400px; border: 1px solid #000; margin: 50px auto; padding: 10px; overflow-y: scroll; }
+        .message { padding: 5px; margin: 5px 0; background-color: #f1f1f1; border-radius: 5px; }
+        .message.me { text-align: right; background-color: #d1f1d1; }
+        .message .token { font-size: 0.75em; color: gray; display: block; }
+        .message-form { display: flex; margin-top: 10px; }
+        .message-form input { flex: 1; padding: 10px; }
+        .message-form button { padding: 10px; }
+        .token-box { text-align: center; margin: 20px; }
+    </style>
+</head>
+<body>
+    <div class="token-box">
+        Your Token: <span id="userToken"></span>
+        <br><small>Share this token to receive messages from others.</small>
+    </div>
+    <div class="chat-box" id="chatBox">
+        <!-- Messages will appear here -->
+    </div>
+    <form class="message-form" id="messageForm">
+        <input type="text" id="messageInput" placeholder="Type your message" autocomplete="off">
+        <input type="text" id="recipientToken" placeholder="Recipient Token (optional)" autocomplete="off">
+        <button type="submit">Send</button>
+    </form>
+
+    <script>
+        const chatBox = document.getElementById('chatBox');
+        const messageForm = document.getElementById('messageForm');
+        const messageInput = document.getElementById('messageInput');
+        const recipientTokenInput = document.getElementById('recipientToken');
+        const userTokenDisplay = document.getElementById('userToken');
+
+        // Generate a unique token for the current user
+        let userToken = localStorage.getItem('userToken');
+        if (!userToken) {
+            userToken = 'user-' + Math.random().toString(36).substring(2, 15);
+            localStorage.setItem('userToken', userToken);
+        }
+        userTokenDisplay.textContent = userToken;
+
+        // Function to add a message to the chat
+        function addMessage(message, senderToken, recipientToken = null) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            if (senderToken === userToken) {
+                messageElement.classList.add('me');
+            }
+            messageElement.innerHTML = `
+                <span class="token">${senderToken}</span>
+                ${message}
+            `;
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // Load existing messages from localStorage
+        function loadMessages() {
+            const messages = JSON.parse(localStorage.getItem('chatMessages')) || [];
+            messages.forEach(({ message, senderToken, recipientToken }) => {
+                // Only show messages directed to the current user or broadcasted messages
+                if (!recipientToken || recipientToken === userToken || senderToken === userToken) {
+                    addMessage(message, senderToken, recipientToken);
+                }
+            });
+        }
+
+        // Save message to localStorage
+        function saveMessage(message, senderToken, recipientToken = null) {
+            const messages = JSON.parse(localStorage.getItem('chatMessages')) || [];
+            messages.push({ message, senderToken, recipientToken });
+            localStorage.setItem('chatMessages', JSON.stringify(messages));
+        }
+
+        // Handle sending messages
+        messageForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+            const message = messageInput.value;
+            const recipientToken = recipientTokenInput.value || null; // If no recipient, it's broadcast
+
+            if (message) {
+                // Add the message to the chat box
+                addMessage(message, userToken, recipientToken);
+
+                // Save the message to localStorage
+                saveMessage(message, userToken, recipientToken);
+
+                // Clear input fields
+                messageInput.value = '';
+                recipientTokenInput.value = '';
+            }
+        });
+
+        // Load messages on page load
+        loadMessages();
+    </script>
+</body>
+</html>
